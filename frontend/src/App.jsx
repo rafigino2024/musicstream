@@ -213,61 +213,86 @@ async function deletePlaylist() {
 }
 
   async function handleRegister(event) {
-    event.preventDefault();
-    setAuthError("");
+  event.preventDefault();
+  setAuthError("");
 
-    try {
-      await API.post("/auth/register", registerForm);
+  try {
+    await API.post("/auth/register", registerForm);
 
-      const loginResponse = await API.post("/auth/login", {
-        email: registerForm.email,
-        password: registerForm.password,
-      });
+    const loginResponse = await API.post("/auth/login", {
+      email: registerForm.email,
+      password: registerForm.password,
+    });
 
-      localStorage.setItem(
-        "musicstream_token",
-        loginResponse.data.access_token
-      );
+    console.log("REGISTER LOGIN RESPONSE:", loginResponse.data);
 
-      await fetchCurrentUser();
+    const token = loginResponse.data.access_token;
 
-      setRegisterForm({
-        username: "",
-        email: "",
-        password: "",
-      });
-
-      setAuthMode(null);
-    } catch (error) {
-      setAuthError(
-        error.response?.data?.detail || "Register failed. Please try again."
-      );
+    if (!token) {
+      throw new Error("No token received from server");
     }
+
+    localStorage.setItem("musicstream_token", token);
+
+    const meResponse = await API.get("/auth/me");
+    setUser(meResponse.data);
+
+    await fetchLikedSongs();
+    await fetchPlaylists();
+
+    setRegisterForm({
+      username: "",
+      email: "",
+      password: "",
+    });
+
+    setAuthMode(null);
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
+
+    setAuthError(
+      error.response?.data?.detail || error.message || "Register failed"
+    );
   }
+}
 
   async function handleLogin(event) {
-    event.preventDefault();
-    setAuthError("");
+  event.preventDefault();
+  setAuthError("");
 
-    try {
-      const response = await API.post("/auth/login", loginForm);
+  try {
+    const response = await API.post("/auth/login", loginForm);
 
-      localStorage.setItem("musicstream_token", response.data.access_token);
+    console.log("LOGIN RESPONSE:", response.data);
 
-      await fetchCurrentUser();
+    const token = response.data.access_token;
 
-      setLoginForm({
-        email: "",
-        password: "",
-      });
-
-      setAuthMode(null);
-    } catch (error) {
-      setAuthError(
-        error.response?.data?.detail || "Login failed. Please try again."
-      );
+    if (!token) {
+      throw new Error("No token received from server");
     }
+
+    localStorage.setItem("musicstream_token", token);
+
+    const meResponse = await API.get("/auth/me");
+    setUser(meResponse.data);
+
+    await fetchLikedSongs();
+    await fetchPlaylists();
+
+    setLoginForm({
+      email: "",
+      password: "",
+    });
+
+    setAuthMode(null);
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+
+    setAuthError(
+      error.response?.data?.detail || error.message || "Login failed"
+    );
   }
+}
 
  function logout() {
   localStorage.removeItem("musicstream_token");
